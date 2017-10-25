@@ -1,0 +1,424 @@
+Red Wine Exploratory Data Analysis by Eric Andresen
+========================================================
+
+## The Mystery of Wine
+
+> “The 2005 Brunello di Montalcino is a model of weightless finesse - dark wild cherries, minerals, menthol, and spices.” - Antonio Galloni
+
+Flowery descriptions of wine have become a trope among wine drinkers. Wines are juicey, earthy, laced with bell pepper and tobacco. But in the midst of many of us wondering if we are trapped in a sick world of inferior taste buds, scientist have been quietly doubting whether these distinctions have any real basis. In the early 2000's a doctoral candidate in Franch had 54 students review glasses of red and white wine, and they did so in spades. The only problem was that they were in fact the same bottle - [the red wine was simply dyed red.](http://www.realclearscience.com/blog/2014/08/the_most_infamous_study_on_wine_tasting.html)  
+
+For all the embarrasment this caused the wine community, this finding really is very unintuitive. We have all had wines we like or dislike - there *must* be a difference, right? For the people that begin to read up on wines there is a basic vocabulary - wines have different levels of acids, sugars, and tannins, all of which combine to make a unique taste. And chemically we know that these differences do exist between varieties of wine. But for each of these there have been studies that question whether they really affect how we perceive the taste of different wines, or if we are mistaking chemical properties for real experience. In [the words of one expert](https://www.chemheritage.org/distillations/magazine/scientia-vitis-decanting-the-chemistry-of-wine-flavor) at the University of California at Davis, Hildegard Heymann, “The chemistry that sets a merlot apart from a pinot noir is nearly impossible to identify." But he continues on, “There may be over 500 different flavor compounds unique to each variety.”
+
+Science seems to be divided between believing that wine is primarily an arbitrary and subjective experience, and that the underlying patterns of that experience are in fact real and waiting to be discovered. In latter case science faces a fundamental challenge of measurement - the human pallet and nose are still far more sensitive than the best instruments available, thus making them in many ways still dependent on the very thing they are trying to verify.
+
+## The Data
+This data set is an analysis of nearly 1600 bottles of red vino verde wine as evaluated by expert tasters from [Cortez et al., 2009](http://dx.doi.org/10.1016/j.dss.2009.05.016). The variables are the components that make up the most established characteristics of wine.
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+rw <- read.csv("wineQualityReds.csv")
+str(rw)
+```
+
+The main chemical values in the set are acid (4 types), sugar, cholrides (i.e. salt), sulfur dioxide and sulphates (preservatives), alcohol (by percentage), and the over all density of the wine. 
+
+Acid is broken into four features: 
+1. `fixed.acidity` is a measure of tartaric acid, which is the main type of acid in wine and is known to contribute to wine stability, color, and "tartness".
+2. `volatile.acidity` measures acetic acid, which contributes to tartness, but in high concentrations can create and unpleasant vinegar taste.
+3. `citric.acid` occurs in smaller amounts, and is associated with freshness.
+4. `pH` is an over all measurement of the acidity of the wine.
+
+Preservatives are broken into three features:
+`sulphates`, `free.sulfur.dioxide`, and `total.sulfur.dioxide`, are all added to increase stability in wines and prevent oxidation. In small levels they should be undetectable to taste, but in larger levels they can create an artificial sensation. 
+
+Finally there is the response variable, `quality`, which is on a ten point scale and is the median of at least three observations. 
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+library(ggplot2)
+library(GGally)
+library(memisc)
+summary(rw)
+```
+
+# Univariate Plots 
+
+```{r echo=FALSE, Univariate_Plots}
+#first do quality to understand over all distribution
+qplot(x = quality, data = rw)
+```
+
+The quality of the wines are integer values, which seems strange given that they are the median of three tastings. Most values scored 5 or 6 with a maximum of 8, and very few in the lower ranges.
+
+```{r echo=FALSE}
+#first do pH and the other acids (citric, volatile, and fixed)
+ggplot(aes(x  = pH), data = rw) +
+  geom_histogram(binwidth = 0.1) +
+  scale_x_continuous(breaks = seq(0,4.0, 0.1))
+```
+
+Most pH values are between 3.1 and 3.5 (normally distributed)
+
+```{r echo=FALSE}
+#first do pH and the other acids (citric, volatile, and fixed)
+ggplot(aes(x  = pH), data = rw) +
+  geom_histogram(binwidth = 0.1) +
+  scale_x_continuous(breaks = seq(0,4.0, 0.1)) +
+  facet_wrap(~quality)
+```
+
+```{r echo=FALSE}
+ggplot(aes(x = fixed.acidity), data = rw) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(breaks = seq(0, 16, 0.5))
+```
+
+Most wines have fixed acidity of 6.0 - 9.0, with right skew. 
+
+```{r echo=FALSE}
+qplot(x = volatile.acidity, data = rw, binwidth = 0.1)
+```
+
+
+```{r echo=FALSE}
+#will be interesting to see if these clusters are reflected in the reviews.
+ggplot(aes(x = citric.acid), data = rw) +
+  geom_histogram(binwidth = 0.02) +
+  scale_x_continuous(breaks = seq(0,1, 0.1))
+```
+
+```{r echo=FALSE}
+ggplot(aes(x = citric.acid), data = rw) +
+  geom_histogram(binwidth = 0.05) +
+  scale_x_sqrt(breaks = seq(0,1, 0.1)) +
+  xlab("sqrt(citric.acid)")
+```
+
+pH is normally distributed around ~3.3, with most of the values between 3.1 and 3.5. Both volatile and fixed acid are right skew. Fixed acid total leves are much higher than volatile (centered around 7.5 vs. 0.5 respectively). Citric acid was transformed using squareroot due to low values. The mode is 0, while there is slight trimodality (clusters) around 0.1, 0.3, and 0.5 with increasing counts. 
+
+```{r echo=FALSE}
+# then do density, sugar, and alcohol content. Sugar and alcohol content should be inversely related.
+ggplot(aes(x = density), data = rw) +
+  geom_histogram() +
+  scale_x_continuous(breaks = seq(0.99,1.5,0.001))
+```
+
+```{r echo=FALSE}
+# then do density, sugar, and alcohol content. Sugar and alcohol content should be inversely related.
+ggplot(aes(x = residual.sugar), data = rw) +
+  geom_histogram(binwidth = 0.25) +
+  scale_x_continuous(breaks = seq(1, 16, 1)) 
+```
+
+```{r echo=FALSE}
+# then do density, sugar, and alcohol content. Sugar and alcohol content should be inversely related.
+ggplot(aes(x = alcohol), data = rw) +
+  geom_histogram(binwidth = 0.25) +
+  scale_x_continuous(breaks = seq(0,16, 1))
+```
+
+```{r echo=FALSE}
+rw$sugar_per_alcohol <- with(rw, residual.sugar / alcohol)
+ggplot(aes(x = sugar_per_alcohol), data = rw) +
+  geom_histogram(binwidth = 0.05) +
+  scale_x_log10(breaks = seq(0.1,1.0, 0.1))
+```
+
+
+Density is often used to gauge the conversion between sugar and alcohol. Interestingly density is normally distributed with differences measured in the thousandths of g/cm^3. Both sugar and alcohol are right skewed, with sugar being far more extremely so. Alcohol has a mode of 9.5 percent, and a long tail with clusters around 10, 10.5, and 11. This might be measurement error. Sugar is tightly peaked around 2 g/ dm^3. Sugar per alcohol is slighlty right skew, with most between 0.15 and 0.3. I'll explore this more by plotting against each other.
+
+```{r echo=FALSE}
+#chlorides here (is there a relationship?)
+ggplot(aes(x = chlorides), data = rw) +
+  geom_histogram(binwidth = 0.01) +
+  scale_x_continuous(breaks = seq(0,1, 0.1))
+```
+
+Chlorides look very similar to sugars, tightly peaked around 0.09 with right skew.
+
+### Additives
+
+```{r echo=FALSE}
+#then do suphates, free.sulfur.dioxide, and total.sulfur.dioxide
+ggplot(aes(x = sulphates), data = rw) +
+  geom_histogram(binwidth = 0.1) +
+  scale_x_continuous(breaks = seq(0,2, 0.1))
+```
+
+```{r echo=FALSE}
+#then do suphates, free.sulfur.dioxide, and total.sulfur.dioxide
+ggplot(aes(x = sulphates), data = rw) +
+  geom_histogram(binwidth = 0.05) +
+  scale_x_log10(breaks = seq(0,2, 0.1))
+```
+
+```{r echo=FALSE}
+ggplot(aes(x = free.sulfur.dioxide), data = rw) +
+  geom_histogram(binwidth = 2.5) +
+  scale_x_continuous(breaks = seq(0,80,5))
+```
+
+```{r echo=FALSE}
+ggplot(aes(x = free.sulfur.dioxide), data = rw) +
+  geom_histogram(binwidth = 0.1) +
+  scale_x_log10(breaks = seq(0,80,5))
+```
+
+Why aren't there 8mg readings?
+
+```{r echo=FALSE}
+ggplot(aes(x = total.sulfur.dioxide), data = rw) +
+  geom_histogram(binwidth = 10) +
+  scale_x_continuous(breaks = seq(0,300,10))
+```
+
+```{r echo=FALSE}
+ggplot(aes(x = total.sulfur.dioxide), data = rw) +
+  geom_histogram(binwidth = 0.05) +
+  scale_x_log10(breaks = seq(0,300,10))
+```
+
+Sulphates and sulfur dioxides are both right skewed with long tails and a few outliers with high values. Total sulphates are much lower than free sulfur dioxide which is slightly lower than total sulfur dioxide.
+
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+There are 1599 observations and 13 features, all of which are numeric and on a continuous scale accept for quality which is an integer.
+
+* The median pH is 3.3
+* The median Alcohol Content is 10.20 % (positive skew)
+* The median Sugar Content is 2.2 (positive skew)
+* The median density is 0.9968
+* Most wines are scored either as 5 or 6 quality
+
+### What is/are the main feature(s) of interest in your dataset?
+
+Quality is the main response variable. I suspect pH, sugar, and alcohol to be the main determinants. 
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+The relationship between Density sugar and alcohol will be of special interest, as will chlorides and sulphates to quality.
+
+### Did you create any new variables from existing variables in the dataset?
+
+Made sugar per alcohol. Might be intersting to make pH per sugar.
+
+### Of the features you investigated, were there any unusual distributions? \
+Did you perform any operations on the data to tidy, adjust, or change the form \
+of the data? If so, why did you do this?
+
+Yes. I log transformed Sugar per alcohol and the preservatives (free and total sulfur dioxide and sulphates) because they had long tails that might obscure patterns in the data. I transformed citric acid using sqrt because it had a cluster around zero that would have distorted the log transform. This was also in anticipation of building a linear model, which requires approximately normally distributed independent variables.
+
+
+# Bivariate Plots Section
+
+
+```{r echo=FALSE, Bivariate_Plots}
+ggpairs(rw)
+```
+
+Based on the grid, it looks like alcohol is the main predicitive factor with contributions from citric acid, sulphates, and volatile acid
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = quality), data = rw) +
+  geom_jitter(alpha = 1/3) +
+  geom_smooth(method = "lm")
+```
+
+There appears to be a general correlation, but the variance is extremely wide, especialy for 5 and 6 ratings where the majority of wines are. It seems higher alcohol content is a necessary but not sufficient condition for a high rating. What could explain this variation?
+
+
+```{r echo=FALSE}
+ggplot(aes(x = citric.acid, y = quality), data = rw) +
+  geom_jitter(alpha = 1/3) +
+  geom_smooth(method = "lm")
+```
+
+This looks similar to alcohol, but slightly more evenly distributed through 5 and 6 ratings.
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = citric.acid), data = rw) +
+  geom_jitter(alpha = 1/3)
+```
+
+Citric acid is not related to alcohol. Will plot in multivariate, might explain some variance within alcohol.
+
+```{r echo=FALSE}
+ggplot(aes(x = sulphates, y = quality), data = rw) +
+  geom_jitter(alpha = 1/3) 
+```
+
+Extreme levels of sulphates might lower rating, but generally sulphates appear to be a necessary condition for a higher rating. Why might this be? Could sulphates increase freshness? 
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = sulphates), data = rw) +
+  geom_jitter(alpha = 1/3)
+```
+
+Small relationship, may not be significant. 
+
+```{r echo=FALSE}
+ggplot(aes(x = volatile.acidity, y = quality), data = rw) +
+  geom_jitter(alpha = 1/3)
+```
+
+Negative relationship, but with high variance. Makes sense, as volatile acids are associated with vinegar.
+
+```{r echo=FALSE}
+ggplot(aes(x = volatile.acidity, y = alcohol), data = rw) +
+  geom_jitter(alpha = 1/3)
+```
+
+There is no or slightly negative relationship between alcohol and volatile acidity.
+
+```{r echo=FALSE}
+ggplot(aes(x = citric.acid, y = volatile.acidity), data = rw) +
+  geom_jitter(alpha = 1/3)
+```
+
+Volatile acidity is negatively correlated to citric acid.
+
+```{r echo=FALSE}
+ggplot(aes(x = residual.sugar, y = quality), data = rw) +
+  geom_jitter(alpha = 1/3)
+```
+
+Surprisingly there doesn't seem to be a relationship between sugar and quality. (It's often said that too much sugar makes a wine taste either juicey or rotten)
+
+```{r echo=FALSE}
+ggplot(aes(y = residual.sugar, x = alcohol), data = rw) +
+  geom_jitter(alpha = 1/3)
+```
+
+Surprisingly alcohol is not related to sugar. This contradicts the well established idea that sugar metabolizes into alcohol during fermentation. Why?
+
+```{r echo=FALSE}
+ggplot(aes(y = residual.sugar, x = chlorides), data = rw) +
+  geom_jitter(alpha = 1/3)
+```
+
+There appears to be overlap but no obvious relationship between chlorides and sugar content.
+
+# Bivariate Analysis
+There appears to be little covariance between the features of interest. Multivariable plotting will provide more insight into whether other factors explain the variance within alcohol. 
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+It seems that alcohol, citric acid, and sulphates have positive relationships with quality, and volatile acid has a negative relationship. None of these feature covary with alcohol. Citric acid is negatively related to volatile acids. Suprisingly sugar has no relationship with quality.
+
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+Citric acid and volatile acidity are negatively related. Interestingly sugar and alcohol content are not related, which is counter intuitive given that sugar is metabolized into alcohol during the fermentation process.
+
+### What was the strongest relationship you found?
+Alcohol was the strongest predictor of quality, but the variance is very high, especially in the mid range where most observations are, thus its predictive power is low.
+
+# Multivariate Plots Section
+
+
+```{r echo=FALSE, Multivariate_Plots}
+ggplot(aes(x = alcohol, y = quality), data = rw) +
+  geom_jitter(aes(color = citric.acid))
+```
+
+Citric acid doesn't seem to be a strong cause of the variance within alcohol 
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = quality), data = rw) +
+  geom_jitter(aes(color = sulphates))
+```
+
+Sulphates don't explain the variance
+
+```{r echo=FALSE}
+ggplot(aes(x = alcohol, y = quality), data = rw) +
+  geom_jitter(aes(color = volatile.acidity))
+```
+
+volatile acid content seems to explain some of the low end variation. I'll make a composite variable to explore more
+
+```{r echo=FALSE}
+ggplot(aes(x = volatile.acidity, y = quality/alcohol), data = rw) +
+  geom_point(alpha = 1/3)
+```
+
+Volatile acidity has a slight negative relationship to quality per percentage of alcohol, but the relationship is very weak.
+
+```{r echo=FALSE}
+ggplot(aes(x = citric.acid, y = volatile.acidity), data = rw) +
+  geom_jitter(aes(color = quality)) 
+```
+Higher rated wines have low volatile acid and mid to high citric acid
+
+```{r echo=FALSE}
+m1 = lm(quality ~ alcohol, data = rw)
+m2 = update(m1, ~ . + citric.acid)
+m3 = update(m2, ~ . + sulphates)
+m4 = update(m3, ~ . + volatile.acidity)
+mtable(m4)
+```
+
+
+
+# Multivariate Analysis
+
+#### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+Surprisingly no. There seems to be little explanation of variance within each of the variable with each other. 
+
+#### Were there any interesting or surprising interactions between features?
+
+Surprisingly little. I expected citric acid or volatile acidity to explain variation within alcohol, but there was very little relationship.
+
+#### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+
+I created a linear model based on the features that have the strongest correlations to quality. It's not surprising that the R2 is low and the deviance is high given the previous exploration. This model is not useful.
+
+
+# Final Plots and Summary
+
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+ggplot(aes(x = residual.sugar, y = quality), data = rw) +
+  geom_jitter(alpha = 1/3)
+```
+
+### Description One
+
+Sugar is typically considered a main determinant of wine quality with too much being bad and too little leading to dryness. This graph shows that there was no relationship between the two, which was an important finding going forward.
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+ggplot(aes(x = alcohol, y = quality), data = rw) +
+  geom_jitter(aes(color = citric.acid))
+```
+
+### Description Two
+Given the two strongest correlations to quality were alcohol and citric acid, I thought that citric acid might explain some of the variance of the other, but this graph shows that this is not the case. 
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+ggplot(aes(x = citric.acid, y = volatile.acidity), data = rw) +
+  geom_jitter(aes(color = quality)) +
+  ggtitle("Citric Acid vs. Volatile Acidity by Quality") +
+  xlab("Citric Acid (g/dm^3)") +
+  ylab("Volatile Acidity (g/dm^3)")
+```
+
+### Description Three
+
+We can see here that high quality wines tend to have lower volatile acid and mid to high citric acid. This makes sense given that volatile acids are associated with a vinegar-like taste and citric acid is associated with "brightness" or "freshness". This also shows that volatile and citric acids are inversely correlated.
+
+
+# Reflection
+
+Interestingly much of the debate around wine seems to be substantiated by this data. While there is a small correlation between some chemical factors, they explain only about a third of the variation in changes in quality (R2). The intuitive and oft cited contributors to flavor of acid and sugar had suprisingly little impact on quality ratings, while suphates had a positive effect contrary to their reputation. The lack of relationships between features and the output variable suggests that either the ratings of these wines have a high level of randomness in their evaluation, or are effected by things other than their main chemical composition. It would be good to have more data on terroir or growing conditions for each of the wines as these might be a good proxy for molecular differences in the wines not measured here. It would also be nice to have more granular data on quality. It seems strange that the median of at least three reviewers would be on an integer scale. It is also interesting that the ratings only ranged from 3 to 8. This might indicate reviewer bias, or, more likely, it is a reflection of the fact that vino verdhe is typically not highly regarded as a red wine. 
+
+The hardest part of this analysis was not finding patterns. It continually made me second guess if I was doing the right things, or if I should somehow transform my data or add more metrics. I would have liked to do more advanced calculations such as conditional means, but with a response variable that was basically categorical it made it difficult. 
+
+## Resources Used
+
+All resources used for background are linked above.
+Additionally:
+https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet#links
+http://www.nytimes.com/2005/08/07/magazine/the-chemistry-of-a-90-wine.html
+http://www.calwineries.com/learn/wine-chemistry/wine-acids/tartaric-acid
